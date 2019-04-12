@@ -9,12 +9,13 @@ url <- read_html("https://www.infoplease.com/business-finance/poverty-and-income
 #scrape table
 income <- url %>%
   html_node(css = "#A0104653")%>%
-#You are giving to the css argument a sting, that is whi is in "" and it needs the css selector (the#) #)
+#You are giving to the css argument a sting, that is whi is in "" and it needs the css selector (the#))
   html_table()
 
 income <- as_tibble(income)
-income <- select(income,State,`2015`)
+income <- select(income, State,`2015`)
 
+#To change the format in which this variable is shown:
 income <- income %>%
   mutate(`2015`=str_extract_all(`2015`,"[0-9]+"))%>%
   mutate(`2015`=map_chr(`2015`,paste,collapse=""))
@@ -22,8 +23,6 @@ income <- income %>%
 typeof(income)
 as.data.frame(income)
 names(income)[names(income) == "2015"] <- "Avg_Income_2015"
-
-write.csv(income, file = "Avg_Inc.csv", row.names = F)
 
 #Specifying the url for another website to be scrapped
 url2 <- read_html("https://www.50states.com/abbreviations.htm")

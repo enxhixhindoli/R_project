@@ -1,0 +1,148 @@
+---
+title: "Final_deliverable"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r include=FALSE}
+library(rvest)
+library(stringr)
+library(tidyverse)
+```
+
+## Data Collection
+
+The telecomunication company provided the LSU team with different datasets about demographics and rate changes. For the scope of this project, only a subset of the whole dataset was used, and the variable BAN_SEQ was assumed to be the PK identifying unique customers. 
+
+```{r echo=FALSE}
+RCU <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/RateChangeUnique.csv", sep =",", header=TRUE)
+DEMO <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/DEMO.csv", sep =",", header=TRUE)
+DF <- merge(DEMO,RCU, by = "BAN_SEQ")
+```
+
+```{r include=FALSE}
+write.csv(DF, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Rate_Demo.csv")
+```
+
+#Scraping
+
+In order to add some information about the income, a table containing the average income per state was brought from the website into the Global Environment of Rstudio.
+
+```{r income}
+url <- read_html("https://www.infoplease.com/business-finance/poverty-and-income/capita-personal-income-state")
+income <- url %>%
+  html_node(css = "#A0104653")%>%
+  html_table()
+```
+
+For the purpose of this project, only the column showing the average income of each state in 2015 was kept.
+
+```{r}
+income <- as_tibble(income)
+income <- select(income, State,`2015`)
+income[1:3,]
+```
+
+```{r include=FALSE}
+typeof(income)
+```
+
+To change this column's format, as we want it to be homogeneous, stringr package seems to be the right solution.
+
+```{r results="hide"}
+income <- income %>%
+  mutate(`2015`=str_extract_all(`2015`,"[0-9]+"))%>%
+  mutate(`2015`=map_chr(`2015`,paste,collapse=""))
+
+income <- as.data.frame(income)
+names(income)[names(income) == "2015"] <- "AVG_INCOME_2015"
+names(income)[names(income) == "State"] <- "STATE"
+```
+
+In the dataset provided by the company, the states are represented only with their abbreviation. Therefore, another table, - containing the states and their abbreviations,- was extracted from the following website.
+```{r}
+head(income)
+```
+
+```{r state_abbreviation}
+url2 <- read_html("https://www.50states.com/abbreviations.htm")
+
+states <- url2 %>%
+  html_node("[class='spaced stripedRows']")%>%
+  html_table()
+
+states <- as.data.frame(states)
+states <- states[-(51:67),]
+
+names(states)[names(states) == "US State:"] <- "STATE"
+names(states)[names(states) == "Abbreviation:"] <- "STATE_ABBREVIATION"
+states %>% slice(1:2)
+
+```
+At this point, the two tables were merged by the column "STATE".
+```{r}
+Income_per_state <- merge(income,states,by="STATE")
+slice(Income_per_state, 1:4)
+```
+
+```{r include=FALSE}
+write.csv(Income_per_state, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Income_per_state.csv")
+
+```
+
+To derive the final dataset, this table was merged with the csv dataset provided by the company.
+```{r}
+names(DF)[names(DF) == "STATE"] <- "STATE_ABBREVIATION"
+DF1 <- merge(DF,Income_per_state, by = "STATE_ABBREVIATION")
+```
+```{r include=FALSE}
+write.csv(DF1, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Rate_Demo_Income.csv")
+```
+
+## Data preparation
+Subset for year 2015
+Reformat Gender
+Variable churn creation
+Rate_Change
+
+You can also embed plots, for example:
+
+```{r include=FALSE}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+##Visualization
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
