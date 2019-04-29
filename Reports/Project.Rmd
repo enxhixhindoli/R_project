@@ -1,25 +1,36 @@
 ---
 title: "Final_deliverable"
-output: html_document
+author: "Enxhi Xhindoli"
+date: "04/29/2019"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include="hide", include=FALSE, warning=FALSE, message=FALSE}
+chooseCRANmirror(graphics=FALSE, ind=1)
 knitr::opts_chunk$set(echo = TRUE)
+install.packages("caret")
+install.packages("ROSE")
 ```
+
 ```{r include=FALSE}
 library(rvest)
 library(stringr)
 library(tidyverse)
+library(dplyr)
+library(plyr)
+library(here)
 ```
 
 ## Data Collection
 
-The telecomunication company provided the LSU team with different datasets about demographics and rate changes. For the scope of this project, only a subset of the whole dataset was used, and the variable BAN_SEQ was assumed to be the PK identifying unique customers. 
+The telecomunication company provided the LSU team with different datasets about demographics and rate changes. For the scope of this project, only a subset of the whole dataset was used. The variable BAN_SEQ is the ID which identifies a unique customer. 
 
-```{r echo=FALSE}
-RCU <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/RateChangeUnique.csv", sep =",", header=TRUE)
-DEMO <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/DEMO.csv", sep =",", header=TRUE)
-DF <- merge(DEMO,RCU, by = "BAN_SEQ")
+```{r echo=FALSE, message=FALSE}
+RCU <- read.csv(here('Data', 'RateChangeUnique.csv'),sep =",", header = TRUE)
+DEMO <- read.csv(here('Data', 'DEMO.csv'), sep =",", header=TRUE)
+DF <- full_join(DEMO,RCU, by = "BAN_SEQ")
 ```
 
 ```{r include=FALSE}
@@ -31,8 +42,7 @@ write.csv(DF, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Rat
 In order to add some information about the income, a table containing the average income per state was brought from the website into the Global Environment of Rstudio.
 
 ```{r income}
-url <- read_html("https://www.infoplease.com/business-finance/poverty-and-income/capita-personal-income-state")
-income <- url %>%
+income <- read_html("https://www.infoplease.com/business-finance/poverty-and-income/capita-personal-income-state")%>%
   html_node(css = "#A0104653")%>%
   html_table()
 ```
@@ -49,9 +59,9 @@ income[1:3,]
 typeof(income)
 ```
 
-To change this column's format, as we want it to be homogeneous, stringr package seems to be the right solution.
+To change the format of the values in this column, as they need to be homogeneous, stringr package was used.
 
-```{r results="hide"}
+```{r results="hide", message=FALSE}
 income <- income %>%
   mutate(`2015`=str_extract_all(`2015`,"[0-9]+"))%>%
   mutate(`2015`=map_chr(`2015`,paste,collapse=""))
@@ -65,11 +75,10 @@ In the dataset provided by the company, the states are represented only with the
 ```{r}
 head(income)
 ```
+Because in the dataset provided by the company, the states are represented by the abbreviation and not by the full name, another table was extracted from the following website. The table included also the Commonwealth territories which were dropped from the dataset.
 
 ```{r state_abbreviation}
-url2 <- read_html("https://www.50states.com/abbreviations.htm")
-
-states <- url2 %>%
+states <- read_html("https://www.50states.com/abbreviations.htm") %>%
   html_node("[class='spaced stripedRows']")%>%
   html_table()
 
@@ -78,13 +87,13 @@ states <- states[-(51:67),]
 
 names(states)[names(states) == "US State:"] <- "STATE"
 names(states)[names(states) == "Abbreviation:"] <- "STATE_ABBREVIATION"
-states %>% slice(1:2)
+colnames(states)
 
 ```
 At this point, the two tables were merged by the column "STATE".
 ```{r}
-Income_per_state <- merge(income,states,by="STATE")
-slice(Income_per_state, 1:4)
+Income_per_state <- merge(states,income,by="STATE")
+head(Income_per_state)
 ```
 
 ```{r include=FALSE}
@@ -92,57 +101,185 @@ write.csv(Income_per_state, file="C:/Users/enxhi/Desktop/R_independentstudy/R_pr
 
 ```
 
-To derive the final dataset, this table was merged with the csv dataset provided by the company.
-```{r}
+Finally, to create the final dataset, this table was merged with the csv dataset provided by the company.
+```{r warning=FALSE}
 names(DF)[names(DF) == "STATE"] <- "STATE_ABBREVIATION"
-DF1 <- merge(DF,Income_per_state, by = "STATE_ABBREVIATION")
+DF1 <- left_join(DF,Income_per_state, by = "STATE_ABBREVIATION")
 ```
+
 ```{r include=FALSE}
 write.csv(DF1, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Rate_Demo_Income.csv")
 ```
 
 ## Data preparation
-Subset for year 2015
-Reformat Gender
-Variable churn creation
-Rate_Change
 
-You can also embed plots, for example:
+For the purpose of this analysis, only the subset of the observations belonging to the year 2015 will be considered. Because R recognizes SNAPSHOT_DATE as a factor,first it needs to be converted to a character, and then to a date.  
+
+```{r results="hide"}
+DF1$SNAPSHOT_DATE <- as.character(DF1$SNAPSHOT_DATE)
+DF1$SNAPSHOT_DATE <- as.Date(DF1$SNAPSHOT_DATE, format = "%m/%d/%Y")
+```
+
+```{r results="hide"}
+DF2 <-DF1 %>% 
+  filter(SNAPSHOT_DATE>'2014-12-31' & SNAPSHOT_DATE<'2016-01-31')
+
+length(unique(DF2$SNAPSHOT_DATE))
+unique(DF2$SNAPSHOT_DATE)
+```
+
+
+From the dataset, it can be clearly seen that the variable CVGENDERCODE1, which is showing the gender, has more than two occurrences. For practical reasons, the name of the column was first changed, and some inspections about it were made.
+```{r}
+names(DF2)[names(DF2) == "CVGENDERCODE1"] <- "GENDER"
+unique(DF2$GENDER)
+```
+
+```{r}
+DF2$GENDER <- as.character(DF2$GENDER)
+DF2%>%
+  group_by(GENDER)%>%
+  summarise(no_rows=length(GENDER=='F'))
+```
+The observations containing values such as: U and null were converted to NA. In this dataset, 22% of the obseravtions have missing values for gender. 
+```{r results="hide"}
+DF2$GENDER <- revalue(DF2$GENDER, c("U"=NA))
+DF2$GENDER <- revalue(DF2$GENDER, c("null"=NA))
+count(DF2$GENDER=='NA')
+```
+Inspections were made also for the variable EDUCATIONAL_LEVEL.
+```{r}
+unique(DF2$EDUCATION_LEVEL)
+```
+```{r}
+DF2$EDUCATION_LEVEL <- revalue(DF2$EDUCATION_LEVEL, c("#N/D"=NA))
+```
+
+To see how the customer's paying rate has changed a new variable was created as difference between CURR_PAYING_RATE and PRIOR_PAYING_RATE.
 
 ```{r include=FALSE}
+is.numeric(DF2$CURR_PAYING_RATE)
+is.factor(DF2$PRIOR_PAYING_RATE)
 
+DF2$CURR_PAYING_RATE <- as.character(DF2$CURR_PAYING_RATE)
+DF2$CURR_PAYING_RATE <- as.numeric(DF2$CURR_PAYING_RATE)
+DF2$CURR_PAYING_RATE[is.na(DF2$CURR_PAYING_RATE)]<- 0
+
+DF2$PRIOR_PAYING_RATE <- as.character(DF2$PRIOR_PAYING_RATE)
+DF2$PRIOR_PAYING_RATE <- as.numeric(DF2$PRIOR_PAYING_RATE)
+DF2$PRIOR_PAYING_RATE[is.na(DF2$PRIOR_PAYING_RATE)]<- 0
 ```
+
+```{r PAYING_RATE_CHANGE, echo=FALSE}
+DF3 <- DF2 %>% mutate(PAYING_RATE_CHANGE= CURR_PAYING_RATE - PRIOR_PAYING_RATE)
+```
+
+Given the definition of customer churn as "Customers who stopped using company's product or service during a certain time frame", for the creation of variable "CHURN" the CURR_QTY and PRIOR_QTY were taken into consideration. The two variables refer respectively to the current and prior quantity of products purchased by the single customer.
 
 ```{r}
-
+DF3$CHURN <- ifelse(DF3$CURR_QTY >= DF3$PRIOR_QTY,0,1)
 ```
+
+To make this analysis even more dynamic, the binary variable NEW_CUST was created. As the name reveals, it shows whether a person is a new customer in 2015 or not.
 
 ```{r}
-
+DF3$NEW_CUST <- if_else(DF3$CURR_QTY > 0 & DF3$PRIOR_QTY == 0,1,0)
+DF3$NEW_CUST <- factor(DF3$NEW_CUST)
 ```
 
-```{r}
-
+```{r include=FALSE}
+write.csv(DF3, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Final_Data.csv")
 ```
+
 ##Visualization
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-```{r}
+
+To see the trend of customers' number throughout the year, they were grouped by SNAPSHOT_DATE.
+
+```{r results="hide", warning=FALSE, message=FALSE, include=FALSE}
+detach(package:plyr, unload=TRUE)
+library(ggplot2)
+```
+
+```{r echo=FALSE, message=FALSE}
+V1 <- na.omit(DF3)
+
+ggplot(V1, aes(SNAPSHOT_DATE,fill=NEW_CUST)) + 
+  xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'bin') + theme(axis.text.x=element_text(angle=60, hjust=1))
 
 ```
 
-```{r}
 
+To see the count of customers in each state, a barchart was used. 
+
+```{r echo=FALSE}
+ggplot() + geom_bar(data = V1, aes(x=STATE_ABBREVIATION)) + 
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+```
+Now that it is known how many customers there are in each state, it could be interesting to figure out how many of those customers are male and female.
+
+```{r echo=FALSE}
+ggplot() + geom_bar(data = V1, aes(x=STATE_ABBREVIATION, fill = GENDER, group=GENDER), position='dodge') + theme(axis.text.x=element_text(angle=60, hjust=1))
+```
+Furethermore, we want se see the correlation between the change in paying rate and the number of calls.
+```{r}
+V1$CALL_COUNT <- as.numeric(V1$CALL_COUNT)
+
+ggplot(V2, aes(x = PAYING_RATE_CHANGE, y= CALL_COUNT)) + geom_point(color="red", size = 2, shape = 23) + xlab("Change in paying rate") + ylab("Calls")
 ```
 
-```{r}
+```{r message=FALSE, include=FALSE}
+DF3$CREDIT_CLASS <- as.numeric(DF3$CREDIT_CLASS)
 
+DF3$EDUCATION_LEVEL <- factor(DF3$EDUCATION_LEVEL)
+DF3$GENDER <- factor(DF3$GENDER)
+
+DF3$AVG_INCOME_2015 <- as.numeric(DF3$AVG_INCOME_2015)
+
+DF3$AGE <- as.character(DF3$AGE)
+DF3$AGE <- as.numeric(DF3$AGE)
+is.na(DF3$AGE) <- 0
 ```
 
+Before building a model, it is necessary to see how many instances of CHURN there are in the dataset.
 ```{r}
-
+table(DF3$CHURN)
 ```
 
-```{r}
+Since the event of churn is a rare event, to maximize the possibility of developing a model on a sample basis extensible in a robust way also on the total population, all the cases of abandonment detected in the analysis period were considered within the sample, while the cases of "no churn" were narrowed down (undersampling). The sample was therefore constructed as follows:  25% formed by units presenting the "abandonment" event (made up of all the customers lost during the analysis period) and 75% formed by units that do not have the "abandonment" event ( randomly extracted from all customers who have not left).
 
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+library(ROSE)
+library(caret)
 ```
 
+```{r message=FALSE, warning=FALSE}
+DF4 <- na.omit(DF3)
+# Split the data into training and test set
+set.seed(123)
+training.samples <- DF4$CHURN %>% 
+  createDataPartition(p = 0.7, list = FALSE)
+train.data  <- DF4[training.samples, ]
+test.data <- DF4[-training.samples, ]
+# imbalance on training set
+table(train.data$CHURN)
+# balanced data set with under-sampling
+data.balanced.under <- ovun.sample(CHURN~CREDIT_CLASS+NEW_CUST+CALL_COUNT+AGE+GENDER+EDUCATION_LEVEL+AVG_INCOME_2015, data=train.data, p=0.25, seed=1, method="under")$data
+table(data.balanced.under$CHURN)
+```
+
+The logistic regression model was created based on training balanced data.
+```{r}
+train_bal <- glm(CHURN~CREDIT_CLASS+NEW_CUST+CALL_COUNT+GENDER+EDUCATION_LEVEL+AVG_INCOME_2015, data=data.balanced.under, family=binomial)
+summary(train_bal)
+```
+
+The model was then applied to the test data.
+```{r}
+# use the trained model to predict test data
+probabilities<- predict(train_bal, newdata=test.data,
+type="response")
+predicted.classes <- ifelse(probabilities > 0.4, "pos", "neg")
+
+# compute accuracy measures (test set)
+accuracy.meas(test.data$CHURN, pred_test, threshold = 0.5)
+```

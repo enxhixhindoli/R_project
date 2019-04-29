@@ -6,11 +6,11 @@ devtools::install_github("jimhester/vroom")
 ARC <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/all_rate_changes_distinct.csv", sep =",", header=TRUE)
 
 # Remove duplicates based on BAN_SEQ column
-RCU <- ARC[!duplicated(ARC$BAN_SEQ), ]
+RCU <- ARC %>% distinct(.ARC, BAN_SEQ,SNAPSHOT_DATE, .keep_all=TRUE)
 
 #Narrow down variables 
 RCU <- RCU %>%
-  select(BAN_SEQ, SNAPSHOT_DATE, CURR_PAYING_RATE, PRIOR_PAYING_RATE,CURR_QTY, PRIOR_QTY, BILL_CODE)
+  select(BAN_SEQ, SNAPSHOT_DATE, CURR_PAYING_RATE, PRIOR_PAYING_RATE,CURR_QTY, PRIOR_QTY)
 
 #Create a csv only with the variables of interest
 write.csv(RCU, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/RateChangeUnique.csv")
@@ -34,7 +34,7 @@ DEMO <- merge(demographics,demographics2, by = "BAN_SEQ")
 DEMO <- DEMO[!duplicated(DEMO$BAN_SEQ), ]
 
 DEMO <- DEMO %>%
-  select(BAN_SEQ, R_BILLING_METHOD, A_BILLING_METHOD, D_BILLING_METHOD, F_BILLING_METHOD, S_BILLING_METHOD, CREDIT_CLASS, CALL_COUNT, AGE,
+  select(BAN_SEQ, CREDIT_CLASS, CALL_COUNT, AGE,
          EDUCATION_LEVEL, CUST_TYPE, CITY, STATE, ZIP, CVGENDERCODE1)
 #Create a csv with demographic data
 write.csv(DEMO, file = "C:/Users/enxhi/Desktop/R_independentstudy/R_project/data/DEMO.csv")
