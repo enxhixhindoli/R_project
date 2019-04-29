@@ -221,10 +221,10 @@ Now that it is known how many customers there are in each state, it could be int
 ggplot() + geom_bar(data = V1, aes(x=STATE_ABBREVIATION, fill = GENDER, group=GENDER), position='dodge') + theme(axis.text.x=element_text(angle=60, hjust=1))
 ```
 Furethermore, we want se see the correlation between the change in paying rate and the number of calls.
-```{r}
+```{r echo=FALSE}
 V1$CALL_COUNT <- as.numeric(V1$CALL_COUNT)
 
-ggplot(V2, aes(x = PAYING_RATE_CHANGE, y= CALL_COUNT)) + geom_point(color="red", size = 2, shape = 23) + xlab("Change in paying rate") + ylab("Calls")
+ggplot(V1, aes(x = PAYING_RATE_CHANGE, y= CALL_COUNT)) + geom_point(color="red", size = 2, shape = 23) + xlab("Change in paying rate") + ylab("Calls")
 ```
 
 ```{r message=FALSE, include=FALSE}
@@ -247,7 +247,7 @@ table(DF3$CHURN)
 
 Since the event of churn is a rare event, to maximize the possibility of developing a model on a sample basis extensible in a robust way also on the total population, all the cases of abandonment detected in the analysis period were considered within the sample, while the cases of "no churn" were narrowed down (undersampling). The sample was therefore constructed as follows:  25% formed by units presenting the "abandonment" event (made up of all the customers lost during the analysis period) and 75% formed by units that do not have the "abandonment" event ( randomly extracted from all customers who have not left).
 
-```{r message=FALSE, warning=FALSE, echo=FALSE}
+```{r message=FALSE, warning=FALSE, include=FALSE}
 library(ROSE)
 library(caret)
 ```
@@ -268,18 +268,18 @@ table(data.balanced.under$CHURN)
 ```
 
 The logistic regression model was created based on training balanced data.
-```{r}
+```{r message=FALSE, warning=FALSE, echo=FALSE}
 train_bal <- glm(CHURN~CREDIT_CLASS+NEW_CUST+CALL_COUNT+GENDER+EDUCATION_LEVEL+AVG_INCOME_2015, data=data.balanced.under, family=binomial)
 summary(train_bal)
 ```
 
 The model was then applied to the test data.
-```{r}
+```{r message=FALSE, warning=FALSE, echo=FALSE}
 # use the trained model to predict test data
 probabilities<- predict(train_bal, newdata=test.data,
 type="response")
 predicted.classes <- ifelse(probabilities > 0.4, "pos", "neg")
 
 # compute accuracy measures (test set)
-accuracy.meas(test.data$CHURN, pred_test, threshold = 0.5)
+accuracy.meas(test.data$CHURN, probabilities, threshold = 0.5)
 ```
