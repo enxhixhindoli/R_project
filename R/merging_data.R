@@ -2,6 +2,7 @@
 library(dplyr)
 library(tidyverse)
 devtools::install_github("jimhester/vroom")
+install.packages("flexdashboard")
 
 ARC <- read.csv("C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/all_rate_changes_distinct.csv", sep =",", header=TRUE)
 
