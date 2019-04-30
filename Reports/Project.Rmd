@@ -3,11 +3,14 @@ title: "R Independent Study"
 author: "Enxhi Xhindoli"
 date: "04/29/2019"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
-
 In this report, a logistic regression was constructed in order to obtain the likelihood of an account churning based off variables utilized within the model. The logistic regression allows to assess the churn likelihood of pre-existing accounts.
+
+```{r include=FALSE}
+options(tinytex.verbose = TRUE)
+```
 
 ```{r include=FALSE, results="hide",warning=FALSE, message=FALSE}
 library(rvest)
@@ -191,7 +194,7 @@ write.csv(DF3, file="C:/Users/enxhi/Desktop/R_independentstudy/R_project/Data/Fi
 
 ## Visualization
 
-The first graph shows how the number of customers has changed during the year and how many new customers there are each month.
+The first graph shows the trend of the number of customers and how many of those customers are "new customers" joining the company.
 
 ```{r results="hide", warning=FALSE, message=FALSE, include=FALSE}
 detach(package:plyr, unload=TRUE)
@@ -200,24 +203,42 @@ library(ggplot2)
 
 ```{r echo=FALSE, message=FALSE}
 V1 <- na.omit(DF3)
+V2 <- V1%>% group_by(SNAPSHOT_DATE,NEW_CUST)%>% summarise(CUSTOMERS=n())
 
-ggplot(V1, aes(SNAPSHOT_DATE,fill=NEW_CUST)) + 
-  xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'bin') + theme(axis.text.x=element_text(angle=60, hjust=1))
-
+ggplot(V2, aes(SNAPSHOT_DATE,CUSTOMERS,fill=NEW_CUST)) + 
+  xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'identity') +  theme(axis.text.x=element_text(angle=60, hjust=1))+ scale_x_date(breaks = V2$SNAPSHOT_DATE, date_labels = '%m/%y') 
 ```
 
 
-To see the count of customers in each state, a barchart was used. 
+To see in which state the company has the highest number of customers,a barchart was used. 
 
-```{r echo=FALSE}
-ggplot() + geom_bar(data = V1, aes(x=STATE_ABBREVIATION)) + 
-  theme(axis.text.x=element_text(angle=60, hjust=1))
+```{r}
+ggplot(V1,
+       aes(x=reorder(STATE_ABBREVIATION,STATE_ABBREVIATION,
+                     function(x)-length(x)))) + geom_bar()+ 
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  xlab("State") + ylab("Number of customers")
 ```
 
-Now that it is known how many customers there are in each state, it could be interesting to figure out how many of those customers are male and female.
+PAYING_RATE_CHANGE is a variable created as the difference between the current paying rate and the prior paying rate by the customers.
+To see for each credit class if the majority of the changes in paying rate has been negative or positive (respectively increasing and decreasing payments),a barchart graphic was created.
 
-```{r echo=FALSE}
-ggplot() + geom_bar(data = V1, aes(x=STATE_ABBREVIATION, fill = GENDER, group=GENDER), position='dodge') + theme(axis.text.x=element_text(angle=60, hjust=1))
+```{r}
+theme_set(theme_bw())  
+
+V1$PAYING_RATE <- ifelse(V1$PAYING_RATE_CHANGE < 0, "decrease", "increase") 
+V1 <- V1[order(V1$PAYING_RATE_CHANGE), ]  # sort
+V1$CREDIT_CLASS <- factor(V1$CREDIT_CLASS)  # convert to factor to retain sorted order in plot.
+
+# Diverging Barcharts
+ggplot(V1, aes(x=CREDIT_CLASS, y=PAYING_RATE_CHANGE, label=PAYING_RATE_CHANGE)) + 
+  geom_bar(stat='identity', aes(fill=PAYING_RATE), width=.5)  +
+  scale_fill_manual(name="Paying Rate", 
+                    labels = c("Decreasing Paying Rate", "Increasing Paying Rate"), 
+                    values = c("decrease"="#00ba38", "increase"="#f8766d")) + 
+  labs(subtitle="Based on credit class", 
+       title= "Change in paying rate") + 
+  coord_flip()
 ```
 
 Furthermore, we want se see the correlation between the change in paying rate and the number of calls.
@@ -227,6 +248,8 @@ V1$CALL_COUNT <- as.numeric(V1$CALL_COUNT)
 
 ggplot(V1, aes(x = PAYING_RATE_CHANGE, y= CALL_COUNT)) + geom_point(color="red", size = 2, shape = 23) + xlab("Change in paying rate") + ylab("Calls")
 ```
+
+As we can see from the graph, most of the calls are distributed around the interval [-50;50] of the PAYING_RATE_CHANGE, and most of the customers have a range of calls between 0 and 100. However, there are also some outliers as it can be seen from the graph above.
 
 ```{r message=FALSE, include=FALSE}
 DF3$CREDIT_CLASS <- as.factor(DF3$CREDIT_CLASS)
@@ -278,8 +301,8 @@ The model was then applied to the test data.
 # use the trained model to predict test data
 probabilities<- predict(train_bal, newdata=test.data,
 type="response")
-predicted.classes <- ifelse(probabilities > 0.4, "pos", "neg")
-
 # compute accuracy measures (test set)
-accuracy.meas(test.data$CHURN, probabilities, threshold = 0.02)
+accuracy.meas(test.data$CHURN, probabilities)
 ```
+
+Finally, as it can be clearly seen from the results, this model is not at all accurated. This makes sense as the demographic data was collected from third parties, and therefore built upon many assumptions, but also because it is hard to predict whether a customer will churn or not based on their gender, education level, or similar.
