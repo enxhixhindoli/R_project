@@ -9,3 +9,5 @@ Different data manipulation techniques were used to reshape the data (reformat t
 To see the relation among different variables, three graphics were built using the ggplot package. 
 
 Finally, the objective of the Churn predictive model is to assign to the customers a measure of the propensity to abandonment. For this reason, this analysis provides also a logistic regression model with the binary target variable being "Churn".
+
+You can find the codes for this projects in the folder Rmd/Project.rmd
