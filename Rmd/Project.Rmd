@@ -29,7 +29,7 @@ library(caret)
 The telecomunication company provided the LSU team with different datasets about demographics and rate changes. For the scope of this project, only a subset of the whole dataset was used. The variable BAN_SEQ is the ID which identifies a unique customer. 
 
 ```{r message=FALSE}
-RCU <- read.csv(here('Data', 'RateChangeUnique.csv'),sep =",", header = TRUE)
+RCU <- read.csv(here('Data', 'RateChangeUnique.csv'), sep =",", header = TRUE)
 DEMO <- read.csv(here('Data', 'DEMO.csv'), sep =",", header=TRUE)
 DF <- full_join(DEMO,RCU, by = "BAN_SEQ")
 ```
@@ -204,15 +204,13 @@ library(ggplot2)
 ```{r echo=FALSE, message=FALSE}
 V1 <- na.omit(DF3)
 V2 <- V1%>% group_by(SNAPSHOT_DATE,NEW_CUST)%>% summarise(CUSTOMERS=n())
-
 ggplot(V2, aes(SNAPSHOT_DATE,CUSTOMERS,fill=NEW_CUST)) + 
   xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'identity') +  theme(axis.text.x=element_text(angle=60, hjust=1))+ scale_x_date(breaks = V2$SNAPSHOT_DATE, date_labels = '%m/%y') 
 ```
 
-
 To see in which state the company has the highest number of customers,a barchart was used. 
 
-```{r}
+```{r echo=FALSE}
 ggplot(V1,
        aes(x=reorder(STATE_ABBREVIATION,STATE_ABBREVIATION,
                      function(x)-length(x)))) + geom_bar()+ 
@@ -223,27 +221,29 @@ ggplot(V1,
 PAYING_RATE_CHANGE is a variable created as the difference between the current paying rate and the prior paying rate by the customers.
 To see for each credit class if the majority of the changes in paying rate has been negative or positive (respectively increasing and decreasing payments),a barchart graphic was created.
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 theme_set(theme_bw())  
-
+V1[V1$CREDIT_CLASS=="A"|V1$CREDIT_CLASS=="H"|V1$CREDIT_CLASS=="Z"|V1$CREDIT_CLASS=="U"|V1$CREDIT_CLASS=="P",] <- NA
 V1$PAYING_RATE <- ifelse(V1$PAYING_RATE_CHANGE < 0, "decrease", "increase") 
 V1 <- V1[order(V1$PAYING_RATE_CHANGE), ]  # sort
 V1$CREDIT_CLASS <- factor(V1$CREDIT_CLASS)  # convert to factor to retain sorted order in plot.
+V3 <- na.omit(V1)
 
 # Diverging Barcharts
-ggplot(V1, aes(x=CREDIT_CLASS, y=PAYING_RATE_CHANGE, label=PAYING_RATE_CHANGE)) + 
+ggplot(V3, aes(x=CREDIT_CLASS, y=PAYING_RATE_CHANGE)) + 
   geom_bar(stat='identity', aes(fill=PAYING_RATE), width=.5)  +
   scale_fill_manual(name="Paying Rate", 
                     labels = c("Decreasing Paying Rate", "Increasing Paying Rate"), 
                     values = c("decrease"="#00ba38", "increase"="#f8766d")) + 
   labs(subtitle="Based on credit class", 
        title= "Change in paying rate") + 
+  xlab("Credit class") + ylab("Change in paying rate")+
   coord_flip()
 ```
 
 Furthermore, we want se see the correlation between the change in paying rate and the number of calls.
 
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 V1$CALL_COUNT <- as.numeric(V1$CALL_COUNT)
 
 ggplot(V1, aes(x = PAYING_RATE_CHANGE, y= CALL_COUNT)) + geom_point(color="red", size = 2, shape = 23) + xlab("Change in paying rate") + ylab("Calls")

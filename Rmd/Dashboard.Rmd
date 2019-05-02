@@ -1,0 +1,88 @@
+---
+title: "Independent study"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: paper
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(here)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+V <- read.csv(here('Data', 'Final_Data.csv'),sep =",", header = TRUE)
+V <- na.omit(V)
+V[,1:2] <- NULL
+V$SNAPSHOT_DATE <- as.Date(V$SNAPSHOT_DATE)
+V$NEW_CUST <- factor(V$NEW_CUST)
+```
+Page 1
+===================================== 
+Column {.sidebar data-width=100}
+-----------------------------------------------------------------------
+```{r}
+selectInput("n_breaks", label = "Number of months:",
+            choices = c(2, 4, 6, 8, 10, 12), selected = 12)
+
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Customers by month
+
+```{r echo=FALSE}
+renderPlotly({
+V4 <- V%>% group_by(SNAPSHOT_DATE)%>% summarise(CUSTOMERS=n())
+ggplot(V4[1:as.numeric(input$n_breaks),], aes(SNAPSHOT_DATE,CUSTOMERS)) + 
+  xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'identity', fill="blue") +  theme(axis.text.x=element_text(angle=60, hjust=1)) +scale_x_date(breaks = V4$SNAPSHOT_DATE, date_labels = '%m/%y') 
+})
+```
+
+Column {.tabset-fade}
+-----------------------------------------------------------------------
+
+### Defining new customers
+
+```{r echo=FALSE}
+renderPlotly({
+V2 <- V%>% group_by(SNAPSHOT_DATE,NEW_CUST)%>% summarise(CUSTOMERS=n())
+ggplot(V2, aes(SNAPSHOT_DATE,CUSTOMERS,fill=NEW_CUST)) + 
+  xlab("Timeline") + ylab("Customers by Month") + geom_bar(stat = 'identity') +  theme(axis.text.x=element_text(angle=60, hjust=1)) +scale_x_date(breaks = V2$SNAPSHOT_DATE, date_labels = '%m/%y') 
+})
+```
+
+
+Page 2
+=====================================
+Column {.sidebar}
+-----------------------------------------------------------------------
+To see in which state the company is operating better, you can choose a number and the states with the highest number of customers will show up.
+
+```{r}
+
+sliderInput("bw_adjust", label = "States with highest customers:",
+            min = 1, max = 30, value = 10, step = 5)
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### Customers by state
+
+```{r}
+renderPlotly({
+  V5 <- V %>%  group_by(STATE_ABBREVIATION)  %>% summarise(N_CUST=n()) %>% arrange(desc(N_CUST))
+
+ggplot(V5[1:as.numeric(input$bw_adjust),],
+       aes(reorder(STATE_ABBREVIATION, -N_CUST),N_CUST)) + geom_bar(stat = 'identity')+ 
+  theme(axis.text.x=element_text(angle=60, hjust=1)) + 
+  xlab("State") + ylab("Number of customers")
+})
+```
+
