@@ -196,87 +196,19 @@ $(document).ready(function () {
 <div id="data-collection" class="section level2">
 <h2>Data Collection</h2>
 <p>The telecomunication company provided the LSU team with different datasets about demographics and rate changes. For the scope of this project, only a subset of the whole dataset was used. The variable BAN_SEQ is the ID which identifies a unique customer.</p>
-<pre class="r"><code>RCU &lt;- read.csv(here('Data', 'RateChangeUnique.csv'), sep =&quot;,&quot;, header = TRUE)
-DEMO &lt;- read.csv(here('Data', 'DEMO.csv'), sep =&quot;,&quot;, header=TRUE)
-DF &lt;- full_join(DEMO,RCU, by = &quot;BAN_SEQ&quot;)</code></pre>
-<div id="scraping" class="section level3">
-<h3>Scraping</h3>
-<p>In order to add some information about the income, a table containing the average income per state was brought from the website into the Global Environment of Rstudio.</p>
-<pre class="r"><code>income &lt;- read_html(&quot;https://www.infoplease.com/business-finance/poverty-and-income/capita-personal-income-state&quot;)%&gt;%
-  html_node(css = &quot;#A0104653&quot;)%&gt;%
-  html_table()</code></pre>
-<p>For the purpose of this project, only the column showing the average income of each state in 2015 was kept.</p>
-<pre class="r"><code>income &lt;- as_tibble(income)
-income &lt;- select(income, State,`2015`)
-income[1:3,]</code></pre>
-<pre><code>## # A tibble: 3 x 2
-##   State   `2015` 
-##   &lt;chr&gt;   &lt;chr&gt;  
-## 1 Alabama $38,965
-## 2 Alaska  55,940 
-## 3 Arizona 39,060</code></pre>
-<p>To change the format of the values in this column, as they need to be homogeneous, stringr package was used.</p>
-<pre class="r"><code>income &lt;- income %&gt;%
-  mutate(`2015`=str_extract_all(`2015`,&quot;[0-9]+&quot;))%&gt;%
-  mutate(`2015`=map_chr(`2015`,paste,collapse=&quot;&quot;))
-
-income &lt;- as.data.frame(income)
-names(income)[names(income) == &quot;2015&quot;] &lt;- &quot;AVG_INCOME_2015&quot;
-names(income)[names(income) == &quot;State&quot;] &lt;- &quot;STATE&quot;</code></pre>
-<p>In the dataset provided by the company, the states are represented only with their abbreviation. Therefore, another table, - containing the states and their abbreviations,- was extracted from the following website. The table included also the Commonwealth territories which were dropped from the dataset.</p>
-<pre class="r"><code>states &lt;- read_html(&quot;https://www.50states.com/abbreviations.htm&quot;) %&gt;%
-  html_node(&quot;[class='spaced stripedRows']&quot;)%&gt;%
-  html_table()
-
-states &lt;- as.data.frame(states)
-states &lt;- states[-(51:67),]
-
-names(states)[names(states) == &quot;US State:&quot;] &lt;- &quot;STATE&quot;
-names(states)[names(states) == &quot;Abbreviation:&quot;] &lt;- &quot;STATE_ABBREVIATION&quot;
-colnames(states)</code></pre>
-<pre><code>## [1] &quot;STATE&quot;              &quot;STATE_ABBREVIATION&quot;</code></pre>
-<p>At this point, the two tables were merged by the column “STATE”.</p>
-<pre class="r"><code>Income_per_state &lt;- merge(states,income,by=&quot;STATE&quot;)
-head(Income_per_state)</code></pre>
-<pre><code>##        STATE STATE_ABBREVIATION AVG_INCOME_2015
-## 1    Alabama                 AL           38965
-## 2     Alaska                 AK           55940
-## 3    Arizona                 AZ           39060
-## 4   Arkansas                 AR           39107
-## 5 California                 CA           52651
-## 6   Colorado                 CO           50410</code></pre>
-<p>Finally, to create the final dataset, this table was merged with the csv dataset provided by the company.</p>
-<pre class="r"><code>names(DF)[names(DF) == &quot;STATE&quot;] &lt;- &quot;STATE_ABBREVIATION&quot;
-DF1 &lt;- left_join(DF,Income_per_state, by = &quot;STATE_ABBREVIATION&quot;)</code></pre>
-</div>
+<p>In order to add some information about the income, a table containing the average income per state and another table containing the states and their abbreviations were scraped from the website into the Global Environment of Rstudio.</p>
 </div>
 <div id="data-preparation" class="section level2">
 <h2>Data preparation</h2>
-<p>For the purpose of this analysis, only the subset of the observations belonging to the year 2015 will be considered. Because R recognizes SNAPSHOT_DATE as a factor,first it needs to be converted to a character, and then to a date.</p>
-<pre class="r"><code>DF1$SNAPSHOT_DATE &lt;- as.character(DF1$SNAPSHOT_DATE)
-DF1$SNAPSHOT_DATE &lt;- as.Date(DF1$SNAPSHOT_DATE, format = &quot;%m/%d/%Y&quot;)</code></pre>
-<pre class="r"><code>DF2 &lt;-DF1 %&gt;% 
-  filter(SNAPSHOT_DATE&gt;'2014-12-31' &amp; SNAPSHOT_DATE&lt;'2016-01-31')
-
-length(unique(DF2$SNAPSHOT_DATE))</code></pre>
-<pre><code>## [1] 12</code></pre>
-<pre class="r"><code>unique(DF2$SNAPSHOT_DATE)</code></pre>
-<pre><code>##  [1] &quot;2015-04-30&quot; &quot;2015-01-31&quot; &quot;2015-07-31&quot; &quot;2015-06-30&quot; &quot;2015-05-31&quot;
-##  [6] &quot;2015-10-31&quot; &quot;2015-12-31&quot; &quot;2015-03-31&quot; &quot;2015-02-28&quot; &quot;2015-08-31&quot;
-## [11] &quot;2015-09-30&quot; &quot;2015-11-30&quot;</code></pre>
-<p>From the dataset, it can be clearly seen that the variable CVGENDERCODE1, which is showing the gender, has more than two occurrences. For practical reasons, the name of the column was first changed, and some inspections about it were made.</p>
-<pre class="r"><code>names(DF2)[names(DF2) == &quot;CVGENDERCODE1&quot;] &lt;- &quot;GENDER&quot;
-DF2$GENDER &lt;- as.character(DF2$GENDER)
-unique(DF2$GENDER)</code></pre>
+<p>In this analysis, only the subset of the observations belonging to the year 2015 will be considered.</p>
+<p>From the dataset, it can be clearly seen that the variable CVGENDERCODE1, which is showing the gender, has more than two occurrences. For practical reasons, the name of the column was first changed to ‘GENDER’, and some inspections about it were made.</p>
+<pre class="r"><code>unique(DF2$GENDER)</code></pre>
 <pre><code>## [1] &quot;M&quot;    &quot;U&quot;    &quot;F&quot;    &quot;null&quot; NA</code></pre>
 <p>The observations containing values such as: U and null were converted to NA. In this dataset, 22% of the obseravtions have missing values for gender.</p>
 <pre class="r"><code>DF2$GENDER &lt;- revalue(DF2$GENDER, c(&quot;U&quot;=NA))
 DF2$GENDER &lt;- revalue(DF2$GENDER, c(&quot;null&quot;=NA))
 count(DF2$GENDER=='NA')</code></pre>
-<p>Inspections were made also for the variable EDUCATIONAL_LEVEL.</p>
-<pre class="r"><code>unique(DF2$EDUCATION_LEVEL)</code></pre>
-<pre><code>## [1] 5    2    4    7    #N/D 1    3    6    &lt;NA&gt;
-## Levels: #N/D 1 2 3 4 5 6 7</code></pre>
+<p>Inspections were made also for the variable EDUCATIONAL_LEVEL and the values ‘#N/D’ were substituted with NA.</p>
 <pre class="r"><code>DF2$EDUCATION_LEVEL &lt;- revalue(DF2$EDUCATION_LEVEL, c(&quot;#N/D&quot;=NA))</code></pre>
 <p>To see how the customer’s paying rate has changed a new variable was created as difference between CURR_PAYING_RATE and PRIOR_PAYING_RATE.</p>
 <p>Given the definition of customer churn as <em>“Customers who stopped using company’s product or service during a certain time frame”</em>, for the creation of variable “CHURN” the CURR_QTY and PRIOR_QTY were taken into consideration. The two variables refer respectively to the current and prior quantity of products purchased by the single customer.</p>
