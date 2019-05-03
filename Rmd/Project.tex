@@ -140,165 +140,23 @@ datasets about demographics and rate changes. For the scope of this
 project, only a subset of the whole dataset was used. The variable
 BAN\_SEQ is the ID which identifies a unique customer.
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{RCU <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\KeywordTok{here}\NormalTok{(}\StringTok{'Data'}\NormalTok{, }\StringTok{'RateChangeUnique.csv'}\NormalTok{),}\DataTypeTok{sep =}\StringTok{","}\NormalTok{, }\DataTypeTok{header =} \OtherTok{TRUE}\NormalTok{)}
-\NormalTok{DEMO <-}\StringTok{ }\KeywordTok{read.csv}\NormalTok{(}\KeywordTok{here}\NormalTok{(}\StringTok{'Data'}\NormalTok{, }\StringTok{'DEMO.csv'}\NormalTok{), }\DataTypeTok{sep =}\StringTok{","}\NormalTok{, }\DataTypeTok{header=}\OtherTok{TRUE}\NormalTok{)}
-\NormalTok{DF <-}\StringTok{ }\KeywordTok{full_join}\NormalTok{(DEMO,RCU, }\DataTypeTok{by =} \StringTok{"BAN_SEQ"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\subsubsection{Scraping}\label{scraping}
-
 In order to add some information about the income, a table containing
-the average income per state was brought from the website into the
-Global Environment of Rstudio.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{income <-}\StringTok{ }\KeywordTok{read_html}\NormalTok{(}\StringTok{"https://www.infoplease.com/business-finance/poverty-and-income/capita-personal-income-state"}\NormalTok{)}\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{html_node}\NormalTok{(}\DataTypeTok{css =} \StringTok{"#A0104653"}\NormalTok{)}\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{html_table}\NormalTok{()}
-\end{Highlighting}
-\end{Shaded}
-
-For the purpose of this project, only the column showing the average
-income of each state in 2015 was kept.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{income <-}\StringTok{ }\KeywordTok{as_tibble}\NormalTok{(income)}
-\NormalTok{income <-}\StringTok{ }\KeywordTok{select}\NormalTok{(income, State,}\StringTok{`}\DataTypeTok{2015}\StringTok{`}\NormalTok{)}
-\NormalTok{income[}\DecValTok{1}\OperatorTok{:}\DecValTok{3}\NormalTok{,]}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## # A tibble: 3 x 2
-##   State   `2015` 
-##   <chr>   <chr>  
-## 1 Alabama $38,965
-## 2 Alaska  55,940 
-## 3 Arizona 39,060
-\end{verbatim}
-
-To change the format of the values in this column, as they need to be
-homogeneous, stringr package was used.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{income <-}\StringTok{ }\NormalTok{income }\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\StringTok{`}\DataTypeTok{2015}\StringTok{`}\NormalTok{=}\KeywordTok{str_extract_all}\NormalTok{(}\StringTok{`}\DataTypeTok{2015}\StringTok{`}\NormalTok{,}\StringTok{"[0-9]+"}\NormalTok{))}\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\StringTok{`}\DataTypeTok{2015}\StringTok{`}\NormalTok{=}\KeywordTok{map_chr}\NormalTok{(}\StringTok{`}\DataTypeTok{2015}\StringTok{`}\NormalTok{,paste,}\DataTypeTok{collapse=}\StringTok{""}\NormalTok{))}
-
-\NormalTok{income <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(income)}
-\KeywordTok{names}\NormalTok{(income)[}\KeywordTok{names}\NormalTok{(income) }\OperatorTok{==}\StringTok{ "2015"}\NormalTok{] <-}\StringTok{ "AVG_INCOME_2015"}
-\KeywordTok{names}\NormalTok{(income)[}\KeywordTok{names}\NormalTok{(income) }\OperatorTok{==}\StringTok{ "State"}\NormalTok{] <-}\StringTok{ "STATE"}
-\end{Highlighting}
-\end{Shaded}
-
-In the dataset provided by the company, the states are represented only
-with their abbreviation. Therefore, another table, - containing the
-states and their abbreviations,- was extracted from the following
-website. The table included also the Commonwealth territories which were
-dropped from the dataset.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{states <-}\StringTok{ }\KeywordTok{read_html}\NormalTok{(}\StringTok{"https://www.50states.com/abbreviations.htm"}\NormalTok{) }\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{html_node}\NormalTok{(}\StringTok{"[class='spaced stripedRows']"}\NormalTok{)}\OperatorTok{%>%}
-\StringTok{  }\KeywordTok{html_table}\NormalTok{()}
-
-\NormalTok{states <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(states)}
-\NormalTok{states <-}\StringTok{ }\NormalTok{states[}\OperatorTok{-}\NormalTok{(}\DecValTok{51}\OperatorTok{:}\DecValTok{67}\NormalTok{),]}
-
-\KeywordTok{names}\NormalTok{(states)[}\KeywordTok{names}\NormalTok{(states) }\OperatorTok{==}\StringTok{ "US State:"}\NormalTok{] <-}\StringTok{ "STATE"}
-\KeywordTok{names}\NormalTok{(states)[}\KeywordTok{names}\NormalTok{(states) }\OperatorTok{==}\StringTok{ "Abbreviation:"}\NormalTok{] <-}\StringTok{ "STATE_ABBREVIATION"}
-\KeywordTok{colnames}\NormalTok{(states)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "STATE"              "STATE_ABBREVIATION"
-\end{verbatim}
-
-At this point, the two tables were merged by the column ``STATE''.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{Income_per_state <-}\StringTok{ }\KeywordTok{merge}\NormalTok{(states,income,}\DataTypeTok{by=}\StringTok{"STATE"}\NormalTok{)}
-\KeywordTok{head}\NormalTok{(Income_per_state)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-##        STATE STATE_ABBREVIATION AVG_INCOME_2015
-## 1    Alabama                 AL           38965
-## 2     Alaska                 AK           55940
-## 3    Arizona                 AZ           39060
-## 4   Arkansas                 AR           39107
-## 5 California                 CA           52651
-## 6   Colorado                 CO           50410
-\end{verbatim}
-
-Finally, to create the final dataset, this table was merged with the csv
-dataset provided by the company.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{names}\NormalTok{(DF)[}\KeywordTok{names}\NormalTok{(DF) }\OperatorTok{==}\StringTok{ "STATE"}\NormalTok{] <-}\StringTok{ "STATE_ABBREVIATION"}
-\NormalTok{DF1 <-}\StringTok{ }\KeywordTok{left_join}\NormalTok{(DF,Income_per_state, }\DataTypeTok{by =} \StringTok{"STATE_ABBREVIATION"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
+the average income per state and another table containing the states and
+their abbreviations were scraped from the website into the Global
+Environment of Rstudio.
 
 \subsection{Data preparation}\label{data-preparation}
 
-For the purpose of this analysis, only the subset of the observations
-belonging to the year 2015 will be considered. Because R recognizes
-SNAPSHOT\_DATE as a factor,first it needs to be converted to a
-character, and then to a date.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{DF1}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE <-}\StringTok{ }\KeywordTok{as.character}\NormalTok{(DF1}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE)}
-\NormalTok{DF1}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE <-}\StringTok{ }\KeywordTok{as.Date}\NormalTok{(DF1}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE, }\DataTypeTok{format =} \StringTok{"%m/%d/%Y"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{DF2 <-DF1 }\OperatorTok{%>%}\StringTok{ }
-\StringTok{  }\KeywordTok{filter}\NormalTok{(SNAPSHOT_DATE}\OperatorTok{>}\StringTok{'2014-12-31'} \OperatorTok{&}\StringTok{ }\NormalTok{SNAPSHOT_DATE}\OperatorTok{<}\StringTok{'2016-01-31'}\NormalTok{)}
-
-\KeywordTok{length}\NormalTok{(}\KeywordTok{unique}\NormalTok{(DF2}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE))}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] 12
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{unique}\NormalTok{(DF2}\OperatorTok{$}\NormalTok{SNAPSHOT_DATE)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-##  [1] "2015-04-30" "2015-01-31" "2015-07-31" "2015-06-30" "2015-05-31"
-##  [6] "2015-10-31" "2015-12-31" "2015-03-31" "2015-02-28" "2015-08-31"
-## [11] "2015-09-30" "2015-11-30"
-\end{verbatim}
+In this analysis, only the subset of the observations belonging to the
+year 2015 will be considered.
 
 From the dataset, it can be clearly seen that the variable
 CVGENDERCODE1, which is showing the gender, has more than two
 occurrences. For practical reasons, the name of the column was first
-changed, and some inspections about it were made.
+changed to `GENDER', and some inspections about it were made.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\KeywordTok{names}\NormalTok{(DF2)[}\KeywordTok{names}\NormalTok{(DF2) }\OperatorTok{==}\StringTok{ "CVGENDERCODE1"}\NormalTok{] <-}\StringTok{ "GENDER"}
-\NormalTok{DF2}\OperatorTok{$}\NormalTok{GENDER <-}\StringTok{ }\KeywordTok{as.character}\NormalTok{(DF2}\OperatorTok{$}\NormalTok{GENDER)}
 \KeywordTok{unique}\NormalTok{(DF2}\OperatorTok{$}\NormalTok{GENDER)}
 \end{Highlighting}
 \end{Shaded}
@@ -319,18 +177,8 @@ gender.
 \end{Highlighting}
 \end{Shaded}
 
-Inspections were made also for the variable EDUCATIONAL\_LEVEL.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\KeywordTok{unique}\NormalTok{(DF2}\OperatorTok{$}\NormalTok{EDUCATION_LEVEL)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] 5    2    4    7    #N/D 1    3    6    <NA>
-## Levels: #N/D 1 2 3 4 5 6 7
-\end{verbatim}
+Inspections were made also for the variable EDUCATIONAL\_LEVEL and the
+values `\#N/D' were substituted with NA.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -367,18 +215,21 @@ customer in 2015 or not.
 
 \subsection{Visualization}\label{visualization}
 
-The first graph shows how the number of customers has changed during the
-year and how many new customers there are each month.
+The first graph shows the trend of the number of customers and how many
+of those customers are ``new customers'' joining the company.
 
 \includegraphics{Project_files/figure-latex/unnamed-chunk-23-1.pdf}
 
-To see the count of customers in each state, a barchart was used.
+To see in which state the company has the highest number of customers,a
+barchart was used.
 
 \includegraphics{Project_files/figure-latex/unnamed-chunk-24-1.pdf}
 
-Now that it is known how many customers there are in each state, it
-could be interesting to figure out how many of those customers are male
-and female.
+PAYING\_RATE\_CHANGE is a variable created as the difference between the
+current paying rate and the prior paying rate by the customers. To see
+for each credit class if the majority of the changes in paying rate has
+been negative or positive (respectively increasing and decreasing
+payments),a barchart graphic was created.
 
 \includegraphics{Project_files/figure-latex/unnamed-chunk-25-1.pdf}
 
@@ -386,6 +237,11 @@ Furthermore, we want se see the correlation between the change in paying
 rate and the number of calls.
 
 \includegraphics{Project_files/figure-latex/unnamed-chunk-26-1.pdf}
+
+As we can see from the graph, most of the calls are distributed around
+the interval {[}-50;50{]} of the PAYING\_RATE\_CHANGE, and most of the
+customers have a range of calls between 0 and 100. However, there are
+also some outliers as it can be seen from the graph above.
 
 \subsection{Builging a Logistic Regression model to predict
 CHURN}\label{builging-a-logistic-regression-model-to-predict-churn}
@@ -517,6 +373,12 @@ The model was then applied to the test data.
 ## recall: 0.056
 ## F: 0.021
 \end{verbatim}
+
+Finally, as it can be clearly seen from the results, this model is not
+at all accurated. This makes sense as the demographic data was collected
+from third parties, and therefore built upon many assumptions, but also
+because it is hard to predict whether a customer will churn or not based
+on their gender, education level, or similar.
 
 
 \end{document}

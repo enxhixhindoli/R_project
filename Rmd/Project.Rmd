@@ -3,8 +3,8 @@ title: "R Independent Study"
 author: "Enxhi Xhindoli"
 date: "04/29/2019"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 In this report, a logistic regression was constructed in order to obtain the likelihood of an account churning based off variables utilized within the model. The logistic regression allows to assess the churn likelihood of pre-existing accounts.
 
